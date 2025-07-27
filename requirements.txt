@@ -5,3 +5,6 @@ requests==2.32.3
 celery==5.4.0
 redis==5.0.4
 sslyze==5.4.2
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.0.7
+psycopg2-binary==2.9.9
