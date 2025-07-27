@@ -1,26 +1,47 @@
 # Project Sentinel: The Proactive Web Security Monitor
 
-## Development Roadmap
+Project Sentinel is a full-stack web application designed to provide simple, actionable, and continuous security monitoring. It features a React frontend, a Python/Flask backend, and uses Celery for asynchronous task processing and scheduling with a PostgreSQL database for persistent storage.
 
-- **Phase 1: The Foundation (Complete)**
-- **Phase 2: The First Scan (Complete)**
+## Final Features
 
-- **Phase 3: Asynchronous & Deeper Scanning (Current)**
-  - **Goal:** Handle long-running scans without blocking the UI and add more powerful scanning tools.
-  - **Features:** Integrated Celery and Redis to run scans as background jobs. Added SSL/TLS scanning by wrapping the `sslyze` command-line tool. The UI now shows a "Pending" state for scans in progress.
+- **User Authentication:** Secure user registration and login.
+- **Asynchronous Scanning:** Uses Celery and Redis to run scans in the background without freezing the UI.
+- **Scheduled Monitoring:** Celery Beat automatically runs scans for all registered websites on a daily schedule.
+- **Persistent Storage:** Uses a PostgreSQL database to store all user and website data.
+- **Real-time Feedback:** The frontend polls the backend to get the status and results of background scans.
+- **Multi-layered Analysis:** Scans for critical security headers and in-depth SSL/TLS configuration issues.
 
-- **Phase 4: Proactive Monitoring & Notifications**
-  - **Goal:** Make the system autonomous and proactive.
+## Final Architecture Setup
 
-## Phase 3: Setup and Installation
-
-The setup for Phase 3 is significantly more complex due to the introduction of background workers. You are now running a distributed system on your local machine.
+The setup is complex, requiring a database, a message broker, and multiple running processes.
 
 ### Prerequisites
 
 - **Node.js & npm**
 - **Python 3 & pip**
-- **Redis:** You must have a Redis server installed and running. You can install it via a package manager like `brew` (macOS) or `apt` (Linux), or run it using Docker.
-- **sslyze:** The command-line tool must be installed.
-  ```bash
-  pip install sslyze
+- **PostgreSQL:** A running PostgreSQL server. You will need to create a database (e.g., `sentinel`) and have the connection URL handy.
+- **Redis:** A running Redis server.
+- **sslyze:** The command-line tool (`pip install sslyze`).
+
+### Backend Setup
+
+You will need **three separate terminals** for the backend services.
+
+1.  **Install all dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+2.  **Database Initialization (One-time setup):**
+    * Set the `DATABASE_URL` environment variable to your PostgreSQL connection string.
+    * Initialize the database with Flask-Migrate:
+    ```bash
+    export FLASK_APP=app.py
+    flask db init  # Only run this the very first time
+    flask db migrate -m "Initial migration."
+    flask db upgrade
+    ```
+
+**Terminal 1: Run the Celery Beat Scheduler**
+This process schedules the daily scans.
+```bash
+celery -A app.celery beat --loglevel=info
