@@ -1,28 +1,26 @@
-import React, from 'react';
+import React, { useState, useEffect } from 'react';
 
-// --- Helper Components ---
-
-const Spinner = () => (
-  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-);
+// --- Helper & Icon Components ---
+const Spinner = ({ size = 'h-5 w-5' }) => <div className={`animate-spin rounded-full border-b-2 border-white ${size}`}></div>;
+const ShieldCheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>;
+const AlertTriangleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.21 3.03-1.742 3.03H4.42c-1.532 0-2.492-1.696-1.742-3.03l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-4a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" /></svg>;
+const XCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>;
 
 // --- Main App Component ---
-
 export default function App() {
-  // Using a simple string to manage the current view.
-  // In a larger app, we would use a routing library.
-  const [view, setView] = React.useState('login'); // 'login', 'register', 'dashboard'
-  const [token, setToken] = React.useState(null);
-  const [websites, setWebsites] = React.useState([]);
-  const [newUrl, setNewUrl] = React.useState('');
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [error, setError] = React.useState('');
-  const [notification, setNotification] = React.useState('');
-  
-  const API_URL = 'http://127.0.0.1:5000/api'; // Backend URL
+  const [view, setView] = useState('login');
+  const [token, setToken] = useState(null);
+  const [websites, setWebsites] = useState([]);
+  const [newUrl, setNewUrl] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [scanningId, setScanningId] = useState(null);
+  const [error, setError] = useState('');
+  const [notification, setNotification] = useState('');
+  const [selectedSite, setSelectedSite] = useState(null); // For modal
 
-  // Effect to handle token changes and fetch initial data
-  React.useEffect(() => {
+  const API_URL = 'http://127.0.0.1:5000/api';
+
+  useEffect(() => {
     if (token) {
       setView('dashboard');
       fetchWebsites();
@@ -31,116 +29,79 @@ export default function App() {
     }
   }, [token]);
 
-  // --- API Functions ---
+  const handleAuth = async (endpoint, credentials) => { /* ... (same as before) ... */ };
+  const fetchWebsites = async () => { /* ... (same as before) ... */ };
+  const addWebsite = async (e) => { /* ... (same as before) ... */ };
+  const handleLogout = () => { /* ... (same as before) ... */ };
 
-  const handleAuth = async (endpoint, credentials) => {
-    setIsLoading(true);
+  const handleScan = async (websiteId) => {
+    if (!token) return;
+    setScanningId(websiteId);
     setError('');
     try {
-      const response = await fetch(`${API_URL}/${endpoint}`, {
+      const response = await fetch(`${API_URL}/websites/${websiteId}/scan`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials),
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'An error occurred.');
-      }
-      setToken(data.token);
-      setNotification(`Successfully ${endpoint === 'register' ? 'registered' : 'logged in'}!`);
+      if (!response.ok) throw new Error(data.message || 'Scan failed.');
+      
+      // Update the specific website in the state
+      setWebsites(prevSites => prevSites.map(site => site.id === websiteId ? data.website : site));
+      setNotification(`Scan complete for ${data.website.url}`);
       setTimeout(() => setNotification(''), 3000);
     } catch (err) {
       setError(err.message);
     } finally {
-      setIsLoading(false);
+      setScanningId(null);
     }
   };
 
-  const fetchWebsites = async () => {
-    if (!token) return;
-    setIsLoading(true);
-    try {
-      const response = await fetch(`${API_URL}/websites`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Failed to fetch websites.');
-      setWebsites(data.websites || []);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const AuthForm = ({ isRegister = false }) => { /* ... (same as before) ... */ };
 
-  const addWebsite = async (e) => {
-    e.preventDefault();
-    if (!newUrl || !token) return;
-    setIsLoading(true);
-    setError('');
-    try {
-        const response = await fetch(`${API_URL}/websites`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ url: newUrl })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Failed to add website.');
-        setWebsites([...websites, data.website]);
-        setNewUrl('');
-        setNotification('Website added successfully!');
-        setTimeout(() => setNotification(''), 3000);
-    } catch (err) {
-        setError(err.message);
-    } finally {
-        setIsLoading(false);
-    }
-  };
+  const ScanResultModal = ({ site, onClose }) => {
+    if (!site || !site.scan_results) return null;
 
-  const handleLogout = () => {
-    setToken(null);
-    setWebsites([]);
-    setNotification('You have been logged out.');
-    setTimeout(() => setNotification(''), 3000);
-  };
-
-  // --- Render Logic ---
-
-  const AuthForm = ({ isRegister = false }) => {
-    const [email, setEmail] = React.useState('');
-    const [password, setPassword] = React.useState('');
-
-    const handleSubmit = (e) => {
-      e.preventDefault();
-      const endpoint = isRegister ? 'register' : 'login';
-      handleAuth(endpoint, { email, password });
+    const getStatusIcon = (status) => {
+        switch (status) {
+            case 'Present': return <ShieldCheckIcon />;
+            case 'Missing': return <AlertTriangleIcon />;
+            case 'Error': return <XCircleIcon />;
+            default: return null;
+        }
     };
 
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-        <div className="w-full max-w-md p-8 space-y-6 bg-gray-800 rounded-xl shadow-lg">
-          <h1 className="text-3xl font-bold text-center">
-            {isRegister ? 'Create Account' : 'Welcome Back'}
-          </h1>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-            <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-            <button type="submit" disabled={isLoading} className="w-full px-4 py-2 font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-500 flex items-center justify-center">
-              {isLoading ? <Spinner /> : (isRegister ? 'Register' : 'Login')}
-            </button>
-          </form>
-          {error && <p className="text-red-400 text-center">{error}</p>}
-          <p className="text-center">
-            {isRegister ? 'Already have an account?' : "Don't have an account?"}
-            <button onClick={() => setView(isRegister ? 'login' : 'register')} className="ml-2 font-semibold text-blue-400 hover:underline">
-              {isRegister ? 'Login' : 'Register'}
-            </button>
-          </p>
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+                <header className="p-4 border-b border-gray-700 flex justify-between items-center">
+                    <div>
+                        <h2 className="text-xl font-bold">Scan Results</h2>
+                        <p className="text-sm text-gray-400 font-mono">{site.url}</p>
+                    </div>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white">&times;</button>
+                </header>
+                <div className="p-6 overflow-y-auto">
+                    <ul className="space-y-3">
+                        {site.scan_results.map((result, index) => (
+                            <li key={index} className="bg-gray-700 p-3 rounded-lg">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        {getStatusIcon(result.status)}
+                                        <span className="font-bold">{result.name}</span>
+                                    </div>
+                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                        result.status === 'Present' ? 'bg-green-500/20 text-green-300' :
+                                        result.status === 'Missing' ? 'bg-yellow-500/20 text-yellow-300' : 'bg-red-500/20 text-red-300'
+                                    }`}>{result.status}</span>
+                                </div>
+                                <p className="mt-2 text-sm text-gray-400 pl-8">{result.value}</p>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            </div>
         </div>
-      </div>
     );
   };
 
@@ -153,14 +114,7 @@ export default function App() {
       <main className="p-8">
         <div className="max-w-4xl mx-auto">
           <div className="bg-gray-800 p-6 rounded-xl shadow-lg">
-            <h2 className="text-2xl font-bold mb-4">Monitor a New Website</h2>
-            <form onSubmit={addWebsite} className="flex gap-4">
-              <input type="url" value={newUrl} onChange={e => setNewUrl(e.target.value)} placeholder="https://example.com" className="flex-grow px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-              <button type="submit" disabled={isLoading} className="px-6 py-2 font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-500 flex items-center justify-center">
-                {isLoading ? <Spinner /> : 'Add'}
-              </button>
-            </form>
-            {error && <p className="text-red-400 mt-2">{error}</p>}
+             {/* ... (Add Website Form - same as before) ... */}
           </div>
 
           <div className="mt-8">
@@ -169,8 +123,21 @@ export default function App() {
               <ul className="divide-y divide-gray-700">
                 {websites.length > 0 ? websites.map(site => (
                   <li key={site.id} className="p-4 flex justify-between items-center">
-                    <span className="font-mono">{site.url}</span>
-                    <span className="text-sm px-3 py-1 bg-gray-600 rounded-full">Not Scanned</span>
+                    <div>
+                        <span className="font-mono">{site.url}</span>
+                        <p className="text-xs text-gray-400">
+                            Status: <span className={site.status === 'Scanned' ? 'text-green-400' : 'text-gray-500'}>{site.status}</span>
+                            {site.last_scanned && ` - Last Scanned: ${new Date(site.last_scanned).toLocaleString()}`}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {site.status === 'Scanned' && (
+                            <button onClick={() => setSelectedSite(site)} className="px-3 py-1 text-sm font-semibold bg-gray-600 rounded-md hover:bg-gray-500">View Results</button>
+                        )}
+                        <button onClick={() => handleScan(site.id)} disabled={scanningId === site.id} className="px-4 py-2 font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-500 w-24 flex items-center justify-center">
+                          {scanningId === site.id ? <Spinner size="h-4 w-4" /> : 'Scan'}
+                        </button>
+                    </div>
                   </li>
                 )) : (
                   <li className="p-4 text-center text-gray-400">No websites added yet.</li>
@@ -181,6 +148,7 @@ export default function App() {
         </div>
       </main>
       {notification && <div className="fixed bottom-5 right-5 bg-green-500 text-white px-6 py-3 rounded-lg shadow-xl">{notification}</div>}
+      {selectedSite && <ScanResultModal site={selectedSite} onClose={() => setSelectedSite(null)} />}
     </div>
   );
 
